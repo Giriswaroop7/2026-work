@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1>🕰️ Time Saver</h1>
+                <div class="header-actions">
+                    <div class="datetime-display" id="datetimeDisplay">
+                        <div class="time" id="currentTime">--:--:-- --</div>
+                        <div class="date" id="currentDate">--- --- --, ----</div>
+                    </div>
+                    <button class="add-widget-btn" onclick="openAddWidgetModal()">
+                        <span>+</span> Add Widget
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard -->
+        <div class="dashboard-container" id="dashboard-grid">
+            <!-- Widgets will be dynamically added here -->
+        </div>
+    </div>
+
+    <!-- Add Widget Modal -->
+    <div class="modal" id="addWidgetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Widget</h2>
+                <button class="modal-close" onclick="closeAddWidgetModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="widget-template-grid">
+                    <div class="widget-template" onclick="addDefaultWidget('gmail', '📧 Gmail', 'gmail')">
+                        <div class="template-icon">📧</div>
+                        <div class="template-name">Gmail</div>
+                        <div class="template-desc">Latest emails</div>
+                    </div>
+                    <div class="widget-template" onclick="addDefaultWidget('news', '🤖 AI News', 'news')">
+                        <div class="template-icon">🤖</div>
+                        <div class="template-name">AI News</div>
+                        <div class="template-desc">Top 10 articles</div>
+                    </div>
+                    <div class="widget-template" onclick="addDefaultWidget('todo', '✓ TODO', 'todo')">
+                        <div class="template-icon">✓</div>
+                        <div class="template-name">TODO List</div>
+                        <div class="template-desc">Task manager</div>
+                    </div>
+                    <div class="widget-template" onclick="addDefaultWidget('jira', '🎯 Jira', 'jira')">
+                        <div class="template-icon">🎯</div>
+                        <div class="template-name">Jira Sprint</div>
+                        <div class="template-desc">Sprint tasks</div>
+                    </div>
+                    <div class="widget-template" onclick="showCustomWidgetForm()">
+                        <div class="template-icon">⚙️</div>
+                        <div class="template-name">Custom</div>
+                        <div class="template-desc">Create custom widget</div>
+                    </div>
+                </div>
+                <div id="customWidgetForm" class="custom-widget-form" style="display: none; margin-top: 20px;">
+                    <input type="text" id="customWidgetName" placeholder="Widget name (e.g., Weather, Stocks)" />
+                    <input type="text" id="customWidgetIcon" placeholder="Icon/Emoji (e.g., ☀️)" />
+                    <input type="text" id="customWidgetUrl" placeholder="API URL (optional)" />
+                    <button onclick="createCustomWidget()" class="create-btn">Create Widget</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
