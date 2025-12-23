@@ -30,7 +30,8 @@ let newsApiKey = process.env.NEWS_API_KEY || 'YOUR_NEWS_API_KEY';
 let jiraConfig = {
     host: process.env.JIRA_HOST || 'https://your-domain.atlassian.net',
     email: process.env.JIRA_EMAIL || 'your-email@example.com',
-    apiToken: process.env.JIRA_API_TOKEN || 'YOUR_JIRA_API_TOKEN'
+    apiToken: process.env.JIRA_API_TOKEN || 'YOUR_JIRA_API_TOKEN',
+    boardId: process.env.JIRA_BOARD_ID || null
 };
 
 // Initialize Gmail Auth
@@ -193,33 +194,48 @@ app.get('/api/jira', async (req, res) => {
             });
         }
 
-        const auth = Buffer.from(
-            `${jiraConfig.email}:${jiraConfig.apiToken}`
-        ).toString('base64');
-
-        // Get active sprint
-        const boardResponse = await axios.get(
-            `${jiraConfig.host}/rest/agile/1.0/board?type=scrum`,
-            {
-                headers: {
-                    Authorization: `Basic ${auth}`,
-                    'Content-Type': 'application/json'
-                }
-            }
-        );
-
-        if (boardResponse.data.values.length === 0) {
-            return res.json([]);
+        // Create authorization header - supports both Basic auth and Bearer token (PAT)
+        let authHeader;
+        if (jiraConfig.apiToken.includes(':')) {
+            // Old style API token (email:token) - use Basic auth
+            const auth = Buffer.from(jiraConfig.apiToken).toString('base64');
+            authHeader = `Basic ${auth}`;
+        } else {
+            // Personal Access Token (PAT) - use Bearer token
+            authHeader = `Bearer ${jiraConfig.apiToken}`;
         }
 
-        const boardId = boardResponse.data.values[0].id;
+        // Get active sprint
+        let boardId;
+        
+        if (jiraConfig.boardId) {
+            // Use configured board ID
+            boardId = jiraConfig.boardId;
+        } else {
+            // Get first available board
+            const boardResponse = await axios.get(
+                `${jiraConfig.host}/rest/agile/1.0/board?type=scrum`,
+                {
+                    headers: {
+                        Authorization: authHeader,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (boardResponse.data.values.length === 0) {
+                return res.json([]);
+            }
+
+            boardId = boardResponse.data.values[0].id;
+        }
 
         // Get sprint
         const sprintResponse = await axios.get(
             `${jiraConfig.host}/rest/agile/1.0/board/${boardId}/sprint?state=active`,
             {
                 headers: {
-                    Authorization: `Basic ${auth}`,
+                    Authorization: authHeader,
                     'Content-Type': 'application/json'
                 }
             }
@@ -236,7 +252,7 @@ app.get('/api/jira', async (req, res) => {
             `${jiraConfig.host}/rest/agile/1.0/sprint/${sprintId}/issue`,
             {
                 headers: {
-                    Authorization: `Basic ${auth}`,
+                    Authorization: authHeader,
                     'Content-Type': 'application/json'
                 }
             }
@@ -253,6 +269,54 @@ app.get('/api/jira', async (req, res) => {
         res.json(tasks);
     } catch (error) {
         console.error('Jira error:', error.message);
+        if (error.response) {
+            console.error('Jira API response status:', error.response.status);
+            console.error('Jira API response data:', error.response.data);
+        }
+        res.status(500).json({ error: error.message, details: error.response?.data });
+    }
+});
+
+// List all Jira boards (helper endpoint)
+app.get('/api/jira-boards', async (req, res) => {
+    try {
+        if (jiraConfig.apiToken === 'YOUR_JIRA_API_TOKEN') {
+            return res.status(503).json({
+                error: 'Jira not configured'
+            });
+        }
+
+        let authHeader;
+        if (jiraConfig.apiToken.includes(':')) {
+            const auth = Buffer.from(jiraConfig.apiToken).toString('base64');
+            authHeader = `Basic ${auth}`;
+        } else {
+            authHeader = `Bearer ${jiraConfig.apiToken}`;
+        }
+
+        const boardResponse = await axios.get(
+            `${jiraConfig.host}/rest/agile/1.0/board?type=scrum&maxResults=50`,
+            {
+                headers: {
+                    Authorization: authHeader,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        const boards = boardResponse.data.values.map(board => ({
+            id: board.id,
+            name: board.name,
+            key: board.key
+        }));
+
+        res.json(boards);
+    } catch (error) {
+        console.error('Jira boards error:', error.message);
+        if (error.response) {
+            console.error('Jira API response status:', error.response.status);
+            console.error('Jira API response data:', error.response.data);
+        }
         res.status(500).json({ error: error.message });
     }
 });
