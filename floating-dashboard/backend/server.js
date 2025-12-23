@@ -302,6 +302,62 @@ app.post('/api/save-todos', (req, res) => {
     }
 });
 
+// Save Audio Capture
+app.post('/api/save-audio', (req, res) => {
+    try {
+        const { text } = req.body;
+        
+        if (!text || text.trim().length === 0) {
+            return res.status(400).json({ error: 'No audio text to save' });
+        }
+        
+        // Create filename with date and time
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const dateObj = new Date();
+        const time = dateObj.toLocaleTimeString('en-US', { hour12: true });
+        const dayStr = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+        
+        const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+        const filename = `audio_${dateStr}_${timeStr}.txt`;
+        const filepath = path.join(__dirname, '..', 'saved-audio', filename);
+        
+        // Create saved-audio directory if it doesn't exist
+        const saveDir = path.join(__dirname, '..', 'saved-audio');
+        if (!fs.existsSync(saveDir)) {
+            fs.mkdirSync(saveDir, { recursive: true });
+        }
+        
+        // Create file content with heading, date, time
+        const fileContent = `=====================================
+AUDIO CAPTURE
+=====================================
+Date: ${dateStr}
+Day: ${dayStr}
+Time: ${time}
+=====================================
+
+${text}
+
+=====================================
+End of Recording
+====================================`;
+        
+        fs.writeFileSync(filepath, fileContent);
+        
+        console.log(`Audio saved to: ${filename}`);
+        
+        res.json({ 
+            success: true, 
+            message: `Audio saved to ${filename}`,
+            filename: filename
+        });
+    } catch (error) {
+        console.error('Error saving audio:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get Quote of the Day
 app.get('/api/quote', async (req, res) => {
     try {
@@ -465,6 +521,7 @@ app.listen(PORT, () => {
     console.log('  POST /api/todos - Create new TODO');
     console.log('  GET /api/jira - Fetch sprint tasks');
     console.log('  POST /api/save-todos - Save todos to file');
+    console.log('  POST /api/save-audio - Save audio capture to file');
     console.log('  GET /api/quote - Get thought of the day');
     console.log('  GET /api/word - Get word of the day');
 });

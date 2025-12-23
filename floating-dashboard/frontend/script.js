@@ -121,6 +121,32 @@ function createWidgetHtml(widget, gradientClass) {
         `;
     }
     
+    if (widget.type === 'audio') {
+        return `
+            <div class="widget-card ${gradientClass}" data-widget-id="${widget.id}" data-type="audio">
+                <div class="card-header">
+                    <h3>${widget.title}</h3>
+                    <div class="card-controls">
+                        <button class="delete-btn" onclick="deleteWidget('${widget.id}')">✕</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="audio-controls">
+                        <button class="audio-record-widget-btn" onclick="toggleAudioRecording()">
+                            🎙️ Record
+                        </button>
+                    </div>
+                    <div id="${contentId}" class="audio-content">
+                        <div data-audio-text class="audio-text"></div>
+                        <button class="audio-save-btn" onclick="saveAudioCapture()" style="margin-top: 10px;">
+                            💾 Save Recording
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
     return `
         <div class="widget-card ${gradientClass}" data-widget-id="${widget.id}">
             <div class="card-header">
@@ -145,6 +171,7 @@ async function loadWidgetData(type) {
     if (type === 'news') refreshWidget('news');
     if (type === 'jira') refreshWidget('jira');
     if (type === 'todo') renderTodos();
+    if (type === 'audio') renderAudioWidget();
 }
 
 // Refresh widget
@@ -231,6 +258,11 @@ function renderJiraItems(tasks) {
             </div>
         `;
     }).join('');
+}
+
+// Audio Widget Functions
+function renderAudioWidget() {
+    // This widget doesn't need data loading, just initialization
 }
 
 // TODO functions
@@ -515,7 +547,154 @@ async function loadWordOfDay() {
 function displayWord(word, meaning) {
     const container = document.getElementById('wordOfDay');
     container.innerHTML = `
-        <div class="word-word">${escapeHtml(word)}</div>
+        <div class="word-header">
+            <div class="word-word">${escapeHtml(word)}</div>
+            <button class="pronounce-btn" onclick="pronounceWord('${word.replace(/'/g, "\\'")}')">
+                🔊
+            </button>
+        </div>
         <div class="word-meaning">${escapeHtml(meaning)}</div>
     `;
+}
+
+// Pronounce word function
+function pronounceWord(word) {
+    // Cancel any ongoing speech
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+    }
+    
+    // Create utterance
+    const utterance = new SpeechSynthesisUtterance(word);
+    utterance.rate = 0.9; // Slightly slow rate for clarity
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    
+    // Speak the word
+    window.speechSynthesis.speak(utterance);
+}
+
+// Audio Recording Variables
+let recognition = null;
+let isRecording = false;
+let recognizedText = '';
+
+// Initialize Speech Recognition
+function initSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+        alert('Speech Recognition is not supported in your browser. Please use Chrome, Edge, or Firefox.');
+        return false;
+    }
+    
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    
+    recognition.onstart = () => {
+        isRecording = true;
+        recognizedText = '';
+        document.getElementById('recordBtn').classList.add('recording');
+        document.getElementById('recordBtn').textContent = '⏹️ Stop';
+    };
+    
+    recognition.onresult = (event) => {
+        let interimTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            
+            if (event.results[i].isFinal) {
+                recognizedText += transcript + ' ';
+            } else {
+                interimTranscript += transcript;
+            }
+        }
+        
+        // Update the audio capture widget if it exists
+        const audioWidget = document.querySelector('[data-type="audio"]');
+        if (audioWidget) {
+            const textContent = audioWidget.querySelector('[data-audio-text]');
+            if (textContent) {
+                textContent.textContent = (recognizedText + interimTranscript).trim();
+            }
+        }
+    };
+    
+    recognition.onend = () => {
+        isRecording = false;
+        document.getElementById('recordBtn').classList.remove('recording');
+        document.getElementById('recordBtn').textContent = '🎙️ Record';
+        
+        // Update final text in widget
+        const audioWidget = document.querySelector('[data-type="audio"]');
+        if (audioWidget) {
+            const textContent = audioWidget.querySelector('[data-audio-text]');
+            if (textContent) {
+                textContent.textContent = recognizedText.trim();
+            }
+        }
+    };
+    
+    recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        if (event.error === 'network') {
+            alert('Network error. Please check your internet connection.');
+        }
+    };
+    
+    return true;
+}
+
+// Toggle Audio Recording
+function toggleAudioRecording() {
+    if (!recognition) {
+        if (!initSpeechRecognition()) return;
+    }
+    
+    if (isRecording) {
+        recognition.stop();
+    } else {
+        recognizedText = '';
+        recognition.start();
+    }
+}
+
+// Save Audio Text to File
+async function saveAudioCapture() {
+    if (!recognizedText.trim()) {
+        alert('No audio captured. Please record something first.');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/save-audio`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text: recognizedText.trim()
+            })
+        });
+        
+        if (response.ok) {
+            alert('Audio capture saved successfully!');
+            recognizedText = '';
+            const audioWidget = document.querySelector('[data-type="audio"]');
+            if (audioWidget) {
+                const textContent = audioWidget.querySelector('[data-audio-text]');
+                if (textContent) {
+                    textContent.textContent = '';
+                }
+            }
+        } else {
+            alert('Failed to save audio capture.');
+        }
+    } catch (error) {
+        console.error('Error saving audio capture:', error);
+        alert('Error saving audio capture.');
+    }
 }

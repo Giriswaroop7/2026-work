@@ -17,6 +17,9 @@
                         <div class="time" id="currentTime">--:--:-- --</div>
                         <div class="date" id="currentDate">--- --- --, ----</div>
                     </div>
+                    <button class="record-btn" id="recordBtn" onclick="toggleAudioRecording()" title="Record Audio">
+                        🎙️ Record
+                    </button>
                     <button class="add-widget-btn" onclick="openAddWidgetModal()">
                         <span>+</span> Add Widget
                     </button>
@@ -73,6 +76,11 @@
                         <div class="template-icon">🎯</div>
                         <div class="template-name">Jira Sprint</div>
                         <div class="template-desc">Sprint tasks</div>
+                    </div>
+                    <div class="widget-template" onclick="addDefaultWidget('audio', '🎙️ Audio Capture', 'audio')">
+                        <div class="template-icon">🎙️</div>
+                        <div class="template-name">Audio Capture</div>
+                        <div class="template-desc">Speech to text</div>
                     </div>
                     <div class="widget-template" onclick="showCustomWidgetForm()">
                         <div class="template-icon">⚙️</div>
