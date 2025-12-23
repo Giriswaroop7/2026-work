@@ -40,6 +40,12 @@ document.addEventListener('DOMContentLoaded', () => {
     updateDateTime();
     setInterval(updateDateTime, 1000);
     
+    // Load thought of the day
+    loadThoughtOfDay();
+    
+    // Load word of the day
+    loadWordOfDay();
+    
     // Auto-refresh every 5 minutes
     setInterval(() => {
         widgets.forEach(w => {
@@ -420,4 +426,96 @@ async function saveTodoList() {
     } catch (error) {
         alert(`Error saving tasks: ${error.message}`);
     }
+}
+
+// Load Thought of the Day
+async function loadThoughtOfDay() {
+    try {
+        const today = new Date().toDateString();
+        const stored = localStorage.getItem('thoughtOfDay');
+        
+        if (stored) {
+            const { date, quote, author } = JSON.parse(stored);
+            // Check if it's the same day
+            if (date === today) {
+                displayThought(quote, author);
+                return;
+            }
+        }
+        
+        // Fetch new quote for the day
+        const response = await fetch(`${API_BASE}/quote`);
+        if (response.ok) {
+            const { quote, author } = await response.json();
+            
+            // Store in localStorage
+            localStorage.setItem('thoughtOfDay', JSON.stringify({
+                date: today,
+                quote: quote,
+                author: author
+            }));
+            
+            displayThought(quote, author);
+        } else {
+            displayThought('The only way to do great work is to love what you do.', 'Steve Jobs');
+        }
+    } catch (error) {
+        console.error('Error loading thought of day:', error);
+        displayThought('The only way to do great work is to love what you do.', 'Steve Jobs');
+    }
+}
+
+function displayThought(quote, author) {
+    const container = document.getElementById('thoughtOfDay');
+    container.innerHTML = `
+        <div class="thought-quote">
+            "${escapeHtml(quote)}"
+            <div class="thought-author">— ${escapeHtml(author)}</div>
+        </div>
+    `;
+}
+
+// Load Word of the Day
+async function loadWordOfDay() {
+    try {
+        const today = new Date().toDateString();
+        const stored = localStorage.getItem('wordOfDay');
+        
+        if (stored) {
+            const { date, word, meaning } = JSON.parse(stored);
+            // Check if it's the same day
+            if (date === today) {
+                displayWord(word, meaning);
+                return;
+            }
+        }
+        
+        // Fetch new word for the day
+        const response = await fetch(`${API_BASE}/word`);
+        if (response.ok) {
+            const { word, meaning } = await response.json();
+            
+            // Store in localStorage
+            localStorage.setItem('wordOfDay', JSON.stringify({
+                date: today,
+                word: word,
+                meaning: meaning
+            }));
+            
+            displayWord(word, meaning);
+        } else {
+            displayWord('Serendipity', 'The occurrence of events by chance in a happy or beneficial way.');
+        }
+    } catch (error) {
+        console.error('Error loading word of day:', error);
+        displayWord('Serendipity', 'The occurrence of events by chance in a happy or beneficial way.');
+    }
+}
+
+function displayWord(word, meaning) {
+    const container = document.getElementById('wordOfDay');
+    container.innerHTML = `
+        <div class="word-word">${escapeHtml(word)}</div>
+        <div class="word-meaning">${escapeHtml(meaning)}</div>
+    `;
 }

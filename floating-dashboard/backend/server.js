@@ -302,6 +302,156 @@ app.post('/api/save-todos', (req, res) => {
     }
 });
 
+// Get Quote of the Day
+app.get('/api/quote', async (req, res) => {
+    try {
+        // Load local quotes
+        const quotesFile = path.join(__dirname, 'quotes.json');
+        const allQuotes = JSON.parse(fs.readFileSync(quotesFile, 'utf8'));
+        
+        // Get list of used quotes for today
+        const usedQuotesFile = path.join(__dirname, '..', 'saved-quotes', 'used-quotes.json');
+        const quotesDir = path.join(__dirname, '..', 'saved-quotes');
+        
+        // Create directory if it doesn't exist
+        if (!fs.existsSync(quotesDir)) {
+            fs.mkdirSync(quotesDir, { recursive: true });
+        }
+        
+        let usedQuoteTexts = [];
+        const today = new Date().toDateString();
+        
+        if (fs.existsSync(usedQuotesFile)) {
+            const data = JSON.parse(fs.readFileSync(usedQuotesFile, 'utf8'));
+            // Reset if it's a new day
+            if (data.date !== today) {
+                usedQuoteTexts = [];
+            } else {
+                usedQuoteTexts = data.usedQuotes || [];
+            }
+        }
+        
+        // Find a quote that hasn't been used today
+        let quote = allQuotes.find(q => !usedQuoteTexts.includes(q.text));
+        
+        // If all quotes have been used today, pick a random one
+        if (!quote) {
+            quote = allQuotes[Math.floor(Math.random() * allQuotes.length)];
+            usedQuoteTexts = []; // Reset
+        }
+        
+        // Add to used quotes
+        usedQuoteTexts.push(quote.text);
+        
+        // Save used quotes
+        fs.writeFileSync(usedQuotesFile, JSON.stringify({
+            date: today,
+            usedQuotes: usedQuoteTexts
+        }, null, 2));
+        
+        // Save quote to daily file
+        const dateStr = today.replace(/\s+/g, '_');
+        const dailyQuoteFile = path.join(quotesDir, `quotes_${dateStr}.json`);
+        fs.writeFileSync(dailyQuoteFile, JSON.stringify({
+            date: today,
+            quote: quote.text,
+            author: quote.author,
+            fetchedAt: new Date().toISOString()
+        }, null, 2));
+        
+        console.log(`Quote: "${quote.text}" - ${quote.author}`);
+        
+        res.json({
+            quote: quote.text,
+            author: quote.author,
+            source: 'local'
+        });
+    } catch (error) {
+        console.error('Error getting quote:', error.message);
+        // Return a fallback quote
+        res.json({
+            quote: 'The only way to do great work is to love what you do.',
+            author: 'Steve Jobs',
+            source: 'fallback'
+        });
+    }
+});
+
+// Get word of the day
+app.get('/api/word', async (req, res) => {
+    try {
+        // Load local words
+        const wordsFile = path.join(__dirname, 'words.json');
+        const allWords = JSON.parse(fs.readFileSync(wordsFile, 'utf8'));
+        
+        // Get list of used words for today
+        const usedWordsFile = path.join(__dirname, '..', 'saved-quotes', 'used-words.json');
+        const quotesDir = path.join(__dirname, '..', 'saved-quotes');
+        
+        // Create directory if it doesn't exist
+        if (!fs.existsSync(quotesDir)) {
+            fs.mkdirSync(quotesDir, { recursive: true });
+        }
+        
+        let usedWordTexts = [];
+        const today = new Date().toDateString();
+        
+        if (fs.existsSync(usedWordsFile)) {
+            const data = JSON.parse(fs.readFileSync(usedWordsFile, 'utf8'));
+            // Reset if it's a new day
+            if (data.date !== today) {
+                usedWordTexts = [];
+            } else {
+                usedWordTexts = data.usedWords || [];
+            }
+        }
+        
+        // Find a word that hasn't been used today
+        let wordObj = allWords.find(w => !usedWordTexts.includes(w.word));
+        
+        // If all words have been used today, pick a random one
+        if (!wordObj) {
+            wordObj = allWords[Math.floor(Math.random() * allWords.length)];
+            usedWordTexts = []; // Reset
+        }
+        
+        // Add to used words
+        usedWordTexts.push(wordObj.word);
+        
+        // Save used words
+        fs.writeFileSync(usedWordsFile, JSON.stringify({
+            date: today,
+            usedWords: usedWordTexts
+        }, null, 2));
+        
+        // Save word to daily file
+        const dateStr = today.replace(/\s+/g, '_');
+        const dailyWordFile = path.join(quotesDir, `words_${dateStr}.json`);
+        fs.writeFileSync(dailyWordFile, JSON.stringify({
+            date: today,
+            word: wordObj.word,
+            meaning: wordObj.meaning,
+            fetchedAt: new Date().toISOString()
+        }, null, 2));
+        
+        console.log(`Word: "${wordObj.word}" - ${wordObj.meaning}`);
+        
+        res.json({
+            word: wordObj.word,
+            meaning: wordObj.meaning,
+            source: 'local'
+        });
+    } catch (error) {
+        console.error('Error getting word:', error.message);
+        // Return a fallback word
+        res.json({
+            word: 'Serendipity',
+            meaning: 'The occurrence of events by chance in a happy or beneficial way; finding good things by luck.',
+            source: 'fallback'
+        });
+    }
+});
+
 // Start server
 const PORT = process.env.PORT || 3000;
 initializeGmailAuth();
@@ -315,6 +465,8 @@ app.listen(PORT, () => {
     console.log('  POST /api/todos - Create new TODO');
     console.log('  GET /api/jira - Fetch sprint tasks');
     console.log('  POST /api/save-todos - Save todos to file');
+    console.log('  GET /api/quote - Get thought of the day');
+    console.log('  GET /api/word - Get word of the day');
 });
 
 module.exports = app;
