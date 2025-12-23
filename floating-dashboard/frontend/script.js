@@ -65,10 +65,11 @@ function loadWidgets() {
     } else {
         // Create default widgets
         widgets = [
-            { id: 'w1', type: 'gmail', title: '📧 Gmail', icon: '📧', enabled: true },
+            { id: 'w1', type: 'audio', title: '🎙️ Audio Capture', icon: '🎙️', enabled: true },
             { id: 'w2', type: 'news', title: '🤖 AI News', icon: '🤖', enabled: true },
             { id: 'w3', type: 'todo', title: '✓ TODO', icon: '✓', enabled: true },
-            { id: 'w4', type: 'jira', title: '🎯 Jira', icon: '🎯', enabled: true }
+            { id: 'w4', type: 'jira', title: '🎯 Jira', icon: '🎯', enabled: true },
+            { id: 'w5', type: 'gmail', title: '📧 Gmail', icon: '📧', enabled: true }
         ];
         saveWidgets();
     }
